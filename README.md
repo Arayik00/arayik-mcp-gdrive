@@ -14,13 +14,19 @@ A Node.js MCP server for Google Drive integration. Supports OAuth2 authenticatio
 3. Start the server: `npm start`
 4. Visit `/auth/login` in your browser and complete Google authentication.
 
-## Endpoints
+## Endpoints & Tools
+
+### Main API Endpoints
+
+- `GET /list-files` — Lists all files in the connected Google Drive account.
+- `GET /read-file/:id` — Reads the contents of a file by its ID.
+- `POST /update-file/:id` — Updates the contents of a file by its ID.
+
+### Other Endpoints
+
 - `GET /health` — Health check
 - `GET /auth/login` — Start OAuth2 login
 - `GET /auth/callback` — OAuth2 callback
-- `GET /list-files` — List files
-- `GET /read-file/:id` — Read file metadata/content
-- `POST /update-file/:id` — Update file content
 - `POST /upload-file` — Upload file (multipart/form-data)
 - `POST /upload-file-api` — Upload file (JSON, base64 content)
 
