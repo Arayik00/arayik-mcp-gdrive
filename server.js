@@ -1,12 +1,4 @@
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// arayik-mcp-gdrive: Node.js MCP server for Google Drive
-require('dotenv').config();
-// ...existing code...
-// ...existing code...
 
-// ...existing code...
 // arayik-mcp-gdrive: Node.js MCP server for Google Drive
 require('dotenv').config();
 const express = require('express');
@@ -41,6 +33,10 @@ if (fs.existsSync(TOKEN_PATH)) {
     console.warn('Failed to load Google Drive tokens:', err.message);
   }
 }
+
+app.get('/', (req, res) => {
+  res.send('arayik-mcp-gdrive server is running!');
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
