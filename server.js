@@ -166,6 +166,7 @@ app.get('/read-file/:id', async (req, res) => {
   }
 });
 
+
 // Update file content (plain text)
 app.post('/update-file/:id', express.text({ type: '*/*' }), async (req, res) => {
   if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
@@ -181,6 +182,30 @@ app.post('/update-file/:id', express.text({ type: '*/*' }), async (req, res) => 
       }
     });
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upload a new file via JSON (base64 content)
+app.post('/upload-file-api', async (req, res) => {
+  if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
+  const { filename, content } = req.body;
+  if (!filename || !content) return res.status(400).json({ error: 'Missing filename or content.' });
+  try {
+    const buffer = Buffer.from(content, 'base64');
+    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+    const fileMetadata = { name: filename };
+    const media = {
+      mimeType: 'text/markdown',
+      body: buffer
+    };
+    const result = await drive.files.create({
+      resource: fileMetadata,
+      media,
+      fields: 'id, name'
+    });
+    res.json({ success: true, file: result.data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
