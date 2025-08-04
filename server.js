@@ -157,4 +157,6 @@ app.post('/update-file/:id', express.text({ type: '*/*' }), async (req, res) => 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`arayik-mcp-gdrive server running on port ${PORT}`);
+  // MCP protocol handshake for orchestrator
+  console.log(JSON.stringify({ status: "ok", server: "arayik-mcp-gdrive", port: PORT }));
 });
