@@ -188,6 +188,7 @@ app.post('/update-file/:id', express.text({ type: '*/*' }), async (req, res) => 
 });
 
 // Upload a new file via JSON (base64 content)
+const { Readable } = require('stream');
 app.post('/upload-file-api', async (req, res) => {
   // Always use latest env
   oauth2Client._clientId = process.env.CLIENT_ID;
@@ -214,12 +215,16 @@ app.post('/upload-file-api', async (req, res) => {
   const { filename, content } = req.body;
   if (!filename || !content) return res.status(400).json({ error: 'Missing filename or content.' });
   try {
+    // Convert base64 to buffer and then to stream
     const buffer = Buffer.from(content, 'base64');
+    const stream = new Readable();
+    stream.push(buffer);
+    stream.push(null);
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     const fileMetadata = { name: filename };
     const media = {
-      mimeType: 'text/markdown',
-      body: buffer
+      mimeType: 'text/plain',
+      body: stream
     };
     const result = await drive.files.create({
       resource: fileMetadata,
