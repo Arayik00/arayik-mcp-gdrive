@@ -24,6 +24,7 @@ let userTokens = null;
 // MCP /initialize endpoint for protocol handshake and dynamic env
 app.post('/initialize', (req, res) => {
   const env = req.body && req.body.env ? req.body.env : {};
+  console.log('MCP /initialize received env:', env);
   // Dynamically update process.env and OAuth client if env is provided
   if (env.CLIENT_ID) process.env.CLIENT_ID = env.CLIENT_ID;
   if (env.CLIENT_SECRET) process.env.CLIENT_SECRET = env.CLIENT_SECRET;
