@@ -21,12 +21,14 @@ const oauth2Client = new google.auth.OAuth2(
 
 let userTokens = null;
 
-// Top-level error handlers for debugging
-process.on('uncaughtException', err => {
-  console.error('Uncaught Exception:', err);
-});
-process.on('unhandledRejection', err => {
-  console.error('Unhandled Rejection:', err);
+// MCP /initialize endpoint for protocol handshake
+app.post('/initialize', (req, res) => {
+  res.json({
+    status: 'ok',
+    server: 'arayik-mcp-gdrive',
+    capabilities: ['list-files', 'read-file', 'update-file'],
+    message: 'MCP server initialized.'
+  });
 });
 
 // Load tokens from disk if available
