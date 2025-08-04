@@ -1,3 +1,35 @@
+// MCP stdio protocol handler
+if (!process.env.MCP_DISABLE_STDIO) {
+  process.stdin.setEncoding('utf8');
+  let buffer = '';
+  process.stdin.on('data', chunk => {
+    buffer += chunk;
+    let boundary;
+    while ((boundary = buffer.indexOf('\n')) !== -1) {
+      const line = buffer.slice(0, boundary).trim();
+      buffer = buffer.slice(boundary + 1);
+      if (line) {
+        try {
+          const msg = JSON.parse(line);
+          // Respond to 'initialize' request
+          if (msg.method === 'initialize') {
+            process.stdout.write(JSON.stringify({
+              id: msg.id,
+              result: {
+                status: 'ok',
+                server: 'arayik-mcp-gdrive',
+                capabilities: ['list-files', 'read-file', 'update-file']
+              }
+            }) + '\n');
+          }
+          // Add more MCP methods as needed
+        } catch (err) {
+          process.stdout.write(JSON.stringify({ error: err.message }) + '\n');
+        }
+      }
+    }
+  });
+}
 // arayik-mcp-gdrive: Node.js MCP server for Google Drive
 require('dotenv').config();
 const express = require('express');
