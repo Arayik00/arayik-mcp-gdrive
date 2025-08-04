@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Node.js MCP server for Google Drive integration",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
+   "scripts": {
+    "start": "node arayik-mcp-gdrive/server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
