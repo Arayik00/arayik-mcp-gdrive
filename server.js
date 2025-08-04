@@ -189,7 +189,28 @@ app.post('/update-file/:id', express.text({ type: '*/*' }), async (req, res) => 
 
 // Upload a new file via JSON (base64 content)
 app.post('/upload-file-api', async (req, res) => {
-  if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
+  // Always use latest env
+  oauth2Client._clientId = process.env.CLIENT_ID;
+  oauth2Client._clientSecret = process.env.CLIENT_SECRET;
+  oauth2Client.redirectUri = process.env.REDIRECT_URI;
+
+  if (!userTokens) {
+    // Not authenticated, provide login URL
+    const scopes = [
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/drive.metadata',
+      'openid',
+      'email',
+      'profile'
+    ];
+    const loginUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: scopes,
+      client_id: process.env.CLIENT_ID
+    });
+    return res.status(401).json({ error: 'User not authenticated. Please log in.', loginUrl });
+  }
   const { filename, content } = req.body;
   if (!filename || !content) return res.status(400).json({ error: 'Missing filename or content.' });
   try {
