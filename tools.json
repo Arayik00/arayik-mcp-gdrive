@@ -1,0 +1,20 @@
+[
+  {
+    "name": "list-files",
+    "endpoint": "/list-files",
+    "method": "GET",
+    "description": "Lists all files in the connected Google Drive account."
+  },
+  {
+    "name": "read-file",
+    "endpoint": "/read-file/:id",
+    "method": "GET",
+    "description": "Reads the contents of a file by its ID."
+  },
+  {
+    "name": "update-file",
+    "endpoint": "/update-file/:id",
+    "method": "POST",
+    "description": "Updates the contents of a file by its ID."
+  }
+]
