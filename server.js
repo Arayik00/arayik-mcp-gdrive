@@ -1,4 +1,3 @@
-
 // arayik-mcp-gdrive: Node.js MCP server for Google Drive
 require('dotenv').config();
 const express = require('express');
@@ -21,6 +20,14 @@ const oauth2Client = new google.auth.OAuth2(
 );
 
 let userTokens = null;
+
+// Top-level error handlers for debugging
+process.on('uncaughtException', err => {
+  console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', err => {
+  console.error('Unhandled Rejection:', err);
+});
 
 // Load tokens from disk if available
 if (fs.existsSync(TOKEN_PATH)) {
