@@ -213,7 +213,20 @@ app.post('/upload-file-api', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  // MCP protocol handshake for orchestrator (print JSON first)
-  console.log(JSON.stringify({ status: "ok", server: "arayik-mcp-gdrive", port: PORT }));
-  console.log(`arayik-mcp-gdrive server running on port ${PORT}`);
+  // Print only valid JSON handshake for orchestrator
+  console.log(JSON.stringify({
+    status: "ok",
+    server: "arayik-mcp-gdrive",
+    port: PORT,
+    tools: [
+      { name: "list-files", endpoint: "/list-files", method: "GET" },
+      { name: "read-file", endpoint: "/read-file/:id", method: "GET" },
+      { name: "update-file", endpoint: "/update-file/:id", method: "POST" },
+      { name: "upload-file-api", endpoint: "/upload-file-api", method: "POST" }
+    ]
+  }));
+  // Optionally, print plain text log after JSON handshake
+  setTimeout(() => {
+    console.log(`arayik-mcp-gdrive server running on port ${PORT}`);
+  }, 100);
 });
