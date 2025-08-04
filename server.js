@@ -21,13 +21,31 @@ const oauth2Client = new google.auth.OAuth2(
 
 let userTokens = null;
 
-// MCP /initialize endpoint for protocol handshake
+// MCP /initialize endpoint for protocol handshake and dynamic env
 app.post('/initialize', (req, res) => {
+  const env = req.body && req.body.env ? req.body.env : {};
+  // Dynamically update process.env and OAuth client if env is provided
+  if (env.CLIENT_ID) process.env.CLIENT_ID = env.CLIENT_ID;
+  if (env.CLIENT_SECRET) process.env.CLIENT_SECRET = env.CLIENT_SECRET;
+  if (env.REDIRECT_URI) process.env.REDIRECT_URI = env.REDIRECT_URI;
+  if (env.GDRIVE_CREDS_DIR) process.env.GDRIVE_CREDS_DIR = env.GDRIVE_CREDS_DIR;
+
+  // Re-initialize oauth2Client if any env changed
+  oauth2Client._clientId = process.env.CLIENT_ID;
+  oauth2Client._clientSecret = process.env.CLIENT_SECRET;
+  oauth2Client.redirectUri = process.env.REDIRECT_URI;
+
   res.json({
     status: 'ok',
     server: 'arayik-mcp-gdrive',
     capabilities: ['list-files', 'read-file', 'update-file'],
-    message: 'MCP server initialized.'
+    message: 'MCP server initialized with dynamic env.',
+    env: {
+      CLIENT_ID: process.env.CLIENT_ID,
+      CLIENT_SECRET: process.env.CLIENT_SECRET,
+      REDIRECT_URI: process.env.REDIRECT_URI,
+      GDRIVE_CREDS_DIR: process.env.GDRIVE_CREDS_DIR
+    }
   });
 });
 
