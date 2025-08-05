@@ -136,7 +136,8 @@ app.get('/auth/login', (req, res) => {
     access_type: 'offline',
     scope: scopes,
     client_id: clientId,
-    redirect_uri: redirectUri
+    redirect_uri: redirectUri,
+    prompt: 'consent'
   });
   res.redirect(url);
 });
@@ -148,8 +149,11 @@ app.get('/auth/callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
     userTokens = tokens;
-    // Save token to file for future use
+    // Remove old token file before saving new one
     try {
+      if (fs.existsSync(TOKEN_PATH)) {
+        fs.unlinkSync(TOKEN_PATH);
+      }
       fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2), 'utf8');
       console.log('Saved Google Drive tokens to gdrive_tokens.json.');
     } catch (err) {
