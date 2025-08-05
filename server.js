@@ -256,7 +256,7 @@ app.post('/upload-file-api', async (req, res) => {
     const fileMetadata = { name: filename };
     const media = {
       mimeType,
-      body: buffer
+      body: Readable.from(buffer)
     };
     const result = await drive.files.create({
       resource: fileMetadata,
