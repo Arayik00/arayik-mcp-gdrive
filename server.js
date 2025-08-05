@@ -103,6 +103,16 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/auth/login', (req, res) => {
+  // Allow override of CLIENT_ID, CLIENT_SECRET, REDIRECT_URI from query params
+  const clientId = req.query.CLIENT_ID || process.env.CLIENT_ID;
+  const clientSecret = req.query.CLIENT_SECRET || process.env.CLIENT_SECRET;
+  const redirectUri = req.query.REDIRECT_URI || process.env.REDIRECT_URI;
+
+  // Update oauth2Client with new values if provided
+  oauth2Client._clientId = clientId;
+  oauth2Client._clientSecret = clientSecret;
+  oauth2Client.redirectUri = redirectUri;
+
   const scopes = [
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/drive.file',
@@ -113,7 +123,9 @@ app.get('/auth/login', (req, res) => {
   ];
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: scopes
+    scope: scopes,
+    client_id: clientId,
+    redirect_uri: redirectUri
   });
   res.redirect(url);
 });
