@@ -257,11 +257,13 @@ app.post('/upload-file-api', async (req, res) => {
   } else {
     buffer = Buffer.from(content, 'utf8');
   }
-  // Auto-detect MIME type
+  // Auto-detect MIME type and convert .md/.html to Google Docs for styled rendering
   let mimeType = 'text/plain';
-  if (filename.endsWith('.html')) mimeType = 'text/html';
-  else if (filename.endsWith('.md')) mimeType = 'text/markdown';
-  else if (filename.endsWith('.json')) mimeType = 'application/json';
+  if (filename.endsWith('.html') || filename.endsWith('.md')) {
+    mimeType = 'application/vnd.google-apps.document';
+  } else if (filename.endsWith('.json')) {
+    mimeType = 'application/json';
+  }
   // Add more types as needed
   try {
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
