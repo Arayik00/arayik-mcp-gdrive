@@ -40,10 +40,11 @@ app.use(express.json());
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/auth/callback';
-const CREDS_DIR = process.env.GDRIVE_CREDS_DIR || '.vscode/';
+
 const fs = require('fs');
 const path = require('path');
-const TOKEN_PATH = path.join(CREDS_DIR, 'gdrive_tokens.json');
+// Use a central server path for token storage
+const TOKEN_PATH = '/srv/gdrive_tokens.json';
 
 const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,
@@ -83,12 +84,13 @@ app.post('/initialize', (req, res) => {
 });
 
 // Load tokens from disk if available
+
 if (fs.existsSync(TOKEN_PATH)) {
   try {
     const tokenData = fs.readFileSync(TOKEN_PATH, 'utf8');
     userTokens = JSON.parse(tokenData);
     oauth2Client.setCredentials(userTokens);
-    console.log('Loaded Google Drive tokens from disk.');
+    console.log('Loaded Google Drive tokens from /srv/gdrive_tokens.json.');
   } catch (err) {
     console.warn('Failed to load Google Drive tokens:', err.message);
   }
@@ -139,9 +141,8 @@ app.get('/auth/callback', async (req, res) => {
     userTokens = tokens;
     // Save tokens to disk for future use
     try {
-      fs.mkdirSync(CREDS_DIR, { recursive: true });
       fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2), 'utf8');
-      console.log('Saved Google Drive tokens to disk.');
+      console.log('Saved Google Drive tokens to /srv/gdrive_tokens.json.');
     } catch (err) {
       console.warn('Failed to save Google Drive tokens:', err.message);
     }
