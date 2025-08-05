@@ -246,15 +246,17 @@ app.post('/upload-file-api', async (req, res) => {
   }
 
   // Support both legacy and MCP tool-style payloads
-  let filename, content, isBase64;
+  let filename, content, isBase64, folderId;
   if (req.body.tool === 'Upload_Document' && req.body.args) {
     filename = req.body.args.file_name || req.body.args.filename;
     content = req.body.args.content;
     isBase64 = req.body.args.is_base64;
+    folderId = req.body.args.folder_id;
   } else {
     filename = req.body.file_name || req.body.filename;
     content = req.body.content;
     isBase64 = req.body.is_base64;
+    folderId = req.body.folder_id;
   }
   if (!filename || !content) {
     return res.status(400).json({ error: 'Missing filename or content.' });
@@ -289,7 +291,8 @@ app.post('/upload-file-api', async (req, res) => {
   // Add more types as needed
   try {
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
-    const fileMetadata = { name: filename };
+    // Add folderId as parent if provided
+    const fileMetadata = folderId ? { name: filename, parents: [folderId] } : { name: filename };
     const media = {
       mimeType,
       body: Readable.from(buffer)
@@ -297,7 +300,7 @@ app.post('/upload-file-api', async (req, res) => {
     const result = await drive.files.create({
       resource: fileMetadata,
       media,
-      fields: 'id, name'
+      fields: 'id, name, parents'
     });
     res.json({ success: true, file: result.data });
   } catch (err) {
