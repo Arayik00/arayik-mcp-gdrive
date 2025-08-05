@@ -99,12 +99,12 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+// Start the Express server (move to end of file)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`arayik-mcp-gdrive server running on port ${PORT}`);
 });
-
-  res.json({ status: 'ok' });
 });
 
 app.get('/auth/login', (req, res) => {
