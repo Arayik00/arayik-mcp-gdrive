@@ -213,17 +213,38 @@ app.post('/upload-file-api', async (req, res) => {
     return res.status(401).json({ error: 'User not authenticated. Please log in.', loginUrl });
   }
   const { filename, content } = req.body;
-  if (!filename || !content) return res.status(400).json({ error: 'Missing filename or content.' });
+  if (!filename || !content) {
+    return res.status(400).json({ error: 'Missing filename or content.' });
+  }
+  // Validate filename
+  if (typeof filename !== 'string' || filename.length < 3) {
+    return res.status(400).json({ error: 'Invalid filename.' });
+  }
+  // Validate base64 content
+  let buffer;
   try {
-    // Convert base64 to buffer and then to stream
-    const buffer = Buffer.from(content, 'base64');
+    buffer = Buffer.from(content, 'base64');
+    // Check for base64 decode errors (empty or not a buffer)
+    if (!buffer || buffer.length === 0) {
+      throw new Error('Decoded content is empty or invalid base64.');
+    }
+  } catch (e) {
+    return res.status(400).json({ error: 'Base64 decode failed: ' + e.message });
+  }
+  // Auto-detect MIME type
+  let mimeType = 'text/plain';
+  if (filename.endsWith('.html')) mimeType = 'text/html';
+  else if (filename.endsWith('.md')) mimeType = 'text/markdown';
+  else if (filename.endsWith('.json')) mimeType = 'application/json';
+  // Add more types as needed
+  try {
     const stream = new Readable();
     stream.push(buffer);
     stream.push(null);
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     const fileMetadata = { name: filename };
     const media = {
-      mimeType: 'text/plain',
+      mimeType,
       body: stream
     };
     const result = await drive.files.create({
@@ -233,7 +254,7 @@ app.post('/upload-file-api', async (req, res) => {
     });
     res.json({ success: true, file: result.data });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Google Drive upload failed: ' + err.message });
   }
 });
 
