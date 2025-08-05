@@ -100,7 +100,7 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
-// Start the Express server (move to end of file)
+// Start the Express server (should be at the end of the file, not inside any route)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`arayik-mcp-gdrive server running on port ${PORT}`);
