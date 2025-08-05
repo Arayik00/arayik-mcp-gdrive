@@ -238,14 +238,11 @@ app.post('/upload-file-api', async (req, res) => {
   else if (filename.endsWith('.json')) mimeType = 'application/json';
   // Add more types as needed
   try {
-    const stream = new Readable();
-    stream.push(buffer);
-    stream.push(null);
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     const fileMetadata = { name: filename };
     const media = {
       mimeType,
-      body: stream
+      body: buffer
     };
     const result = await drive.files.create({
       resource: fileMetadata,
