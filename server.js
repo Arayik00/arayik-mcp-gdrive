@@ -35,7 +35,7 @@ require('dotenv').config();
 const express = require('express');
 const { google } = require('googleapis');
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -212,24 +212,48 @@ app.post('/upload-file-api', async (req, res) => {
     });
     return res.status(401).json({ error: 'User not authenticated. Please log in.', loginUrl });
   }
-  const { filename, content } = req.body;
+
+  // Support both legacy and MCP tool-style payloads
+  let filename, content, isBase64;
+  if (req.body.tool === 'Upload_Document' && req.body.args) {
+    filename = req.body.args.file_name || req.body.args.filename;
+    content = req.body.args.content;
+    isBase64 = req.body.args.is_base64;
+  } else {
+    filename = req.body.file_name || req.body.filename;
+    content = req.body.content;
+    isBase64 = req.body.is_base64;
+  }
+  // Debug logging
+  console.log('UPLOAD DEBUG:', {
+    filename,
+    contentType: typeof content,
+    contentLength: content ? content.length : 0,
+    isBase64
+  });
   if (!filename || !content) {
+    console.error('UPLOAD ERROR: Missing filename or content.', { filename, content });
     return res.status(400).json({ error: 'Missing filename or content.' });
   }
   // Validate filename
   if (typeof filename !== 'string' || filename.length < 3) {
+    console.error('UPLOAD ERROR: Invalid filename.', { filename });
     return res.status(400).json({ error: 'Invalid filename.' });
   }
-  // Validate base64 content
+  // Handle base64 or raw text
   let buffer;
-  try {
-    buffer = Buffer.from(content, 'base64');
-    // Check for base64 decode errors (empty or not a buffer)
-    if (!buffer || buffer.length === 0) {
-      throw new Error('Decoded content is empty or invalid base64.');
+  if (isBase64) {
+    try {
+      buffer = Buffer.from(content, 'base64');
+      if (!buffer || buffer.length === 0) {
+        throw new Error('Decoded content is empty or invalid base64.');
+      }
+    } catch (e) {
+      console.error('UPLOAD ERROR: Base64 decode failed.', { error: e.message });
+      return res.status(400).json({ error: 'Base64 decode failed: ' + e.message });
     }
-  } catch (e) {
-    return res.status(400).json({ error: 'Base64 decode failed: ' + e.message });
+  } else {
+    buffer = Buffer.from(content, 'utf8');
   }
   // Auto-detect MIME type
   let mimeType = 'text/plain';
@@ -251,26 +275,7 @@ app.post('/upload-file-api', async (req, res) => {
     });
     res.json({ success: true, file: result.data });
   } catch (err) {
+    console.error('UPLOAD ERROR: Google Drive upload failed.', { error: err.message });
     res.status(500).json({ error: 'Google Drive upload failed: ' + err.message });
   }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  // Print only valid JSON handshake for orchestrator
-  console.log(JSON.stringify({
-    status: "ok",
-    server: "arayik-mcp-gdrive",
-    port: PORT,
-    tools: [
-      { name: "list-files", endpoint: "/list-files", method: "GET" },
-      { name: "read-file", endpoint: "/read-file/:id", method: "GET" },
-      { name: "update-file", endpoint: "/update-file/:id", method: "POST" },
-      { name: "upload-file-api", endpoint: "/upload-file-api", method: "POST" }
-    ]
-  }));
-  // Optionally, print plain text log after JSON handshake
-  setTimeout(() => {
-    console.log(`arayik-mcp-gdrive server running on port ${PORT}`);
-  }, 100);
 });
