@@ -180,17 +180,23 @@ app.get('/read-file/:id', async (req, res) => {
 
 
 // Update file content (plain text)
-app.post('/update-file/:id', express.text({ type: '*/*' }), async (req, res) => {
+app.post('/update-file/:id', async (req, res) => {
   if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
   const fileId = req.params.id;
-  const newContent = req.body;
+  // Accept JSON body: { content, mimeType }
+  const { content, mimeType } = req.body || {};
+  if (!content) return res.status(400).json({ error: 'Missing content.' });
+  let finalMimeType = mimeType;
+  if (!finalMimeType) {
+    finalMimeType = fileId.endsWith('.md') ? 'text/markdown' : 'text/plain';
+  }
   try {
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     await drive.files.update({
       fileId,
       media: {
-        mimeType: 'text/plain',
-        body: newContent
+        mimeType: finalMimeType,
+        body: Buffer.from(content, 'utf8')
       }
     });
     res.json({ success: true });
