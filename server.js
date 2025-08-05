@@ -43,8 +43,17 @@ const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/auth/cal
 
 const fs = require('fs');
 const path = require('path');
-// Use a central server path for token storage
-const TOKEN_PATH = '/srv/gdrive_tokens.json';
+
+// Use environment variable for token storage
+if (process.env.GDRIVE_TOKEN) {
+  try {
+    userTokens = JSON.parse(process.env.GDRIVE_TOKEN);
+    oauth2Client.setCredentials(userTokens);
+    console.log('Loaded Google Drive tokens from environment variable GDRIVE_TOKEN.');
+  } catch (err) {
+    console.warn('Failed to parse GDRIVE_TOKEN:', err.message);
+  }
+}
 
 const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,
@@ -85,16 +94,7 @@ app.post('/initialize', (req, res) => {
 
 // Load tokens from disk if available
 
-if (fs.existsSync(TOKEN_PATH)) {
-  try {
-    const tokenData = fs.readFileSync(TOKEN_PATH, 'utf8');
-    userTokens = JSON.parse(tokenData);
-    oauth2Client.setCredentials(userTokens);
-    console.log('Loaded Google Drive tokens from /srv/gdrive_tokens.json.');
-  } catch (err) {
-    console.warn('Failed to load Google Drive tokens:', err.message);
-  }
-}
+// If GDRIVE_TOKEN is not set, userTokens will be null and OAuth flow will be required
 
 app.get('/', (req, res) => {
   res.send('arayik-mcp-gdrive server is running!');
@@ -139,13 +139,9 @@ app.get('/auth/callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
     userTokens = tokens;
-    // Save tokens to disk for future use
-    try {
-      fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2), 'utf8');
-      console.log('Saved Google Drive tokens to /srv/gdrive_tokens.json.');
-    } catch (err) {
-      console.warn('Failed to save Google Drive tokens:', err.message);
-    }
+    // Print token to console for manual setup in Render dashboard
+    console.log('Google Drive token (copy this to GDRIVE_TOKEN env variable):');
+    console.log(JSON.stringify(tokens, null, 2));
     res.redirect('/list-files');
   } catch (err) {
     res.status(500).send('Authentication failed: ' + err.message);
