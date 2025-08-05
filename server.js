@@ -257,9 +257,11 @@ app.post('/upload-file-api', async (req, res) => {
   } else {
     buffer = Buffer.from(content, 'utf8');
   }
-  // Auto-detect MIME type and convert .md/.html to Google Docs for styled rendering
+  // Auto-detect MIME type
   let mimeType = 'text/plain';
-  if (filename.endsWith('.html') || filename.endsWith('.md')) {
+  if (filename.endsWith('.md')) {
+    mimeType = 'text/markdown';
+  } else if (filename.endsWith('.html')) {
     mimeType = 'application/vnd.google-apps.document';
   } else if (filename.endsWith('.json')) {
     mimeType = 'application/json';
