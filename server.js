@@ -101,7 +101,9 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  let tokenStatus = process.env.GDRIVE_TOKEN ? 'set' : 'not set';
+  let tokenValue = process.env.GDRIVE_TOKEN || null;
+  res.json({ status: 'ok', gdrive_token_status: tokenStatus, gdrive_token_value: tokenValue });
 });
 
 app.get('/auth/login', (req, res) => {
