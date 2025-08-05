@@ -44,14 +44,16 @@ const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/auth/cal
 const fs = require('fs');
 const path = require('path');
 
-// Use environment variable for token storage
-if (process.env.GDRIVE_TOKEN) {
+// Use local file for token storage
+const TOKEN_PATH = path.join(__dirname, 'gdrive_tokens.json');
+let userTokens = null;
+if (fs.existsSync(TOKEN_PATH)) {
   try {
-    userTokens = JSON.parse(process.env.GDRIVE_TOKEN);
+    userTokens = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
     oauth2Client.setCredentials(userTokens);
-    console.log('Loaded Google Drive tokens from environment variable GDRIVE_TOKEN.');
+    console.log('Loaded Google Drive tokens from gdrive_tokens.json.');
   } catch (err) {
-    console.warn('Failed to parse GDRIVE_TOKEN:', err.message);
+    console.warn('Failed to load Google Drive tokens:', err.message);
   }
 }
 
@@ -60,8 +62,6 @@ const oauth2Client = new google.auth.OAuth2(
   CLIENT_SECRET,
   REDIRECT_URI
 );
-
-let userTokens = null;
 
 // MCP /initialize endpoint for protocol handshake and dynamic env
 app.post('/initialize', (req, res) => {
@@ -101,8 +101,15 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  let tokenStatus = process.env.GDRIVE_TOKEN ? 'set' : 'not set';
-  let tokenValue = process.env.GDRIVE_TOKEN || null;
+  let tokenStatus = fs.existsSync(TOKEN_PATH) ? 'set' : 'not set';
+  let tokenValue = null;
+  if (tokenStatus === 'set') {
+    try {
+      tokenValue = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
+    } catch (err) {
+      tokenValue = 'error reading token';
+    }
+  }
   res.json({ status: 'ok', gdrive_token_status: tokenStatus, gdrive_token_value: tokenValue });
 });
 
@@ -141,9 +148,13 @@ app.get('/auth/callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
     userTokens = tokens;
-    // Print token to console for manual setup in Render dashboard
-    console.log('Google Drive token (copy this to GDRIVE_TOKEN env variable):');
-    console.log(JSON.stringify(tokens, null, 2));
+    // Save token to file for future use
+    try {
+      fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2), 'utf8');
+      console.log('Saved Google Drive tokens to gdrive_tokens.json.');
+    } catch (err) {
+      console.warn('Failed to save Google Drive tokens:', err.message);
+    }
     res.redirect('/list-files');
   } catch (err) {
     res.status(500).send('Authentication failed: ' + err.message);
