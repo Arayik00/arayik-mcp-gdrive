@@ -35,7 +35,7 @@ require('dotenv').config();
 const express = require('express');
 const { google } = require('googleapis');
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json());
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -100,11 +100,6 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
-// Start the Express server (should be at the end of the file, not inside any route)
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`arayik-mcp-gdrive server running on port ${PORT}`);
-});
 });
 
 app.get('/auth/login', (req, res) => {
@@ -229,20 +224,11 @@ app.post('/upload-file-api', async (req, res) => {
     content = req.body.content;
     isBase64 = req.body.is_base64;
   }
-  // Debug logging
-  console.log('UPLOAD DEBUG:', {
-    filename,
-    contentType: typeof content,
-    contentLength: content ? content.length : 0,
-    isBase64
-  });
   if (!filename || !content) {
-    console.error('UPLOAD ERROR: Missing filename or content.', { filename, content });
     return res.status(400).json({ error: 'Missing filename or content.' });
   }
   // Validate filename
   if (typeof filename !== 'string' || filename.length < 3) {
-    console.error('UPLOAD ERROR: Invalid filename.', { filename });
     return res.status(400).json({ error: 'Invalid filename.' });
   }
   // Handle base64 or raw text
@@ -254,7 +240,6 @@ app.post('/upload-file-api', async (req, res) => {
         throw new Error('Decoded content is empty or invalid base64.');
       }
     } catch (e) {
-      console.error('UPLOAD ERROR: Base64 decode failed.', { error: e.message });
       return res.status(400).json({ error: 'Base64 decode failed: ' + e.message });
     }
   } else {
@@ -280,7 +265,26 @@ app.post('/upload-file-api', async (req, res) => {
     });
     res.json({ success: true, file: result.data });
   } catch (err) {
-    console.error('UPLOAD ERROR: Google Drive upload failed.', { error: err.message });
     res.status(500).json({ error: 'Google Drive upload failed: ' + err.message });
   }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  // Print only valid JSON handshake for orchestrator
+  console.log(JSON.stringify({
+    status: "ok",
+    server: "arayik-mcp-gdrive",
+    port: PORT,
+    tools: [
+      { name: "list-files", endpoint: "/list-files", method: "GET" },
+      { name: "read-file", endpoint: "/read-file/:id", method: "GET" },
+      { name: "update-file", endpoint: "/update-file/:id", method: "POST" },
+      { name: "upload-file-api", endpoint: "/upload-file-api", method: "POST" }
+    ]
+  }));
+  // Optionally, print plain text log after JSON handshake
+  setTimeout(() => {
+    console.log(`arayik-mcp-gdrive server running on port ${PORT}`);
+  }, 100);
 });
