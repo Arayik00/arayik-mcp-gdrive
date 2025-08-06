@@ -47,21 +47,54 @@ const path = require('path');
 // Use local file for token storage
 const TOKEN_PATH = path.join(__dirname, 'gdrive_tokens.json');
 let userTokens = null;
+let oauth2Client;
 if (fs.existsSync(TOKEN_PATH)) {
   try {
     userTokens = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
+    oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
     oauth2Client.setCredentials(userTokens);
+    if (!userTokens.last_refreshed) {
+      userTokens.last_refreshed = Date.now();
+      fs.writeFileSync(TOKEN_PATH, JSON.stringify(userTokens, null, 2), 'utf8');
+    }
     console.log('Loaded Google Drive tokens from gdrive_tokens.json.');
   } catch (err) {
     console.warn('Failed to load Google Drive tokens:', err.message);
+    oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
   }
+} else {
+  oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 }
 
-const oauth2Client = new google.auth.OAuth2(
-  CLIENT_ID,
-  CLIENT_SECRET,
-  REDIRECT_URI
-);
+// Helper to ensure valid access token before each API call
+async function ensureValidAccessToken() {
+  if (!userTokens) return;
+  const now = Date.now();
+  const lastRefreshed = userTokens.last_refreshed || 0;
+  const oneHour = 60 * 60 * 1000;
+  let needsRefresh = false;
+  if (!userTokens.access_token || (now - lastRefreshed) > oneHour) {
+    needsRefresh = true;
+  }
+  if (needsRefresh) {
+    try {
+      // Use refresh token to get a new access token
+      const tokens = await oauth2Client.refreshAccessToken();
+      oauth2Client.setCredentials(tokens.credentials);
+      userTokens.access_token = tokens.credentials.access_token;
+      if (tokens.credentials.expiry_date) userTokens.expiry_date = tokens.credentials.expiry_date;
+      if (tokens.credentials.refresh_token) userTokens.refresh_token = tokens.credentials.refresh_token;
+      userTokens.last_refreshed = Date.now();
+      fs.writeFileSync(TOKEN_PATH, JSON.stringify(userTokens, null, 2), 'utf8');
+      console.log('Manually refreshed and saved new Google Drive access token.');
+    } catch (err) {
+      console.warn('Failed to manually refresh access token:', err.message);
+    }
+  } else {
+    // Set credentials in case they were updated elsewhere
+    oauth2Client.setCredentials(userTokens);
+  }
+}
 
 // MCP /initialize endpoint for protocol handshake and dynamic env
 app.post('/initialize', (req, res) => {
@@ -149,12 +182,13 @@ app.get('/auth/callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
     userTokens = tokens;
+    userTokens.last_refreshed = Date.now();
     // Remove old token file before saving new one
     try {
       if (fs.existsSync(TOKEN_PATH)) {
         fs.unlinkSync(TOKEN_PATH);
       }
-      fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2), 'utf8');
+      fs.writeFileSync(TOKEN_PATH, JSON.stringify(userTokens, null, 2), 'utf8');
       console.log('Saved Google Drive tokens to gdrive_tokens.json.');
     } catch (err) {
       console.warn('Failed to save Google Drive tokens:', err.message);
@@ -168,6 +202,7 @@ app.get('/auth/callback', async (req, res) => {
 app.get('/list-files', async (req, res) => {
   if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
   try {
+    await ensureValidAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     const result = await drive.files.list({ pageSize: 10 });
     res.json({ files: result.data.files });
@@ -181,6 +216,7 @@ app.get('/read-file/:id', async (req, res) => {
   if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
   const fileId = req.params.id;
   try {
+    await ensureValidAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     // Get file metadata
     const meta = await drive.files.get({ fileId });
@@ -205,6 +241,7 @@ app.post('/update-file/:id', async (req, res) => {
     finalMimeType = fileId.endsWith('.md') ? 'text/markdown' : 'text/plain';
   }
   try {
+    await ensureValidAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     await drive.files.update({
       fileId,
@@ -290,6 +327,7 @@ app.post('/upload-file-api', async (req, res) => {
   }
   // Add more types as needed
   try {
+    await ensureValidAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     // Add folderId as parent if provided
     const fileMetadata = folderId ? { name: filename, parents: [folderId] } : { name: filename };
