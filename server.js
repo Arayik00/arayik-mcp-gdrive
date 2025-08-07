@@ -100,7 +100,10 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+    gdrive_service_account: serviceAccountKey
+  });
 });
 
 app.get('/list-files', async (req, res) => {
