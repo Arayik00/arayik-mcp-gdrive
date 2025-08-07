@@ -173,11 +173,9 @@ app.get('/auth/callback', async (req, res) => {
 });
 
 app.get('/list-files', async (req, res) => {
-  if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
   try {
     await ensureServerInitialized();
-    await ensureValidAccessToken();
-    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+    const drive = google.drive({ version: 'v3', auth });
     const result = await drive.files.list({ pageSize: 10 });
     res.json({ files: result.data.files });
   } catch (err) {
@@ -187,12 +185,10 @@ app.get('/list-files', async (req, res) => {
 
 // Read file metadata and content
 app.get('/read-file/:id', async (req, res) => {
-  if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
   const fileId = req.params.id;
   try {
     await ensureServerInitialized();
-    await ensureValidAccessToken();
-    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+    const drive = google.drive({ version: 'v3', auth });
     // Get file metadata
     const meta = await drive.files.get({ fileId });
     // Get file content (as plain text)
@@ -206,7 +202,6 @@ app.get('/read-file/:id', async (req, res) => {
 
 // Update file content (plain text)
 app.post('/update-file/:id', async (req, res) => {
-  if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
   const fileId = req.params.id;
   // Accept JSON body: { content, mimeType }
   const { content, mimeType } = req.body || {};
@@ -217,8 +212,7 @@ app.post('/update-file/:id', async (req, res) => {
   }
   try {
     await ensureServerInitialized();
-    await ensureValidAccessToken();
-    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+    const drive = google.drive({ version: 'v3', auth });
     await drive.files.update({
       fileId,
       media: {
@@ -236,28 +230,6 @@ app.post('/update-file/:id', async (req, res) => {
 const { Readable } = require('stream');
 app.post('/upload-file-api', async (req, res) => {
   // Always use latest env
-  oauth2Client._clientId = process.env.CLIENT_ID;
-  oauth2Client._clientSecret = process.env.CLIENT_SECRET;
-  oauth2Client.redirectUri = process.env.REDIRECT_URI;
-
-  if (!userTokens) {
-    // Not authenticated, provide login URL
-    const scopes = [
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/drive.metadata',
-      'openid',
-      'email',
-      'profile'
-    ];
-    const loginUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: scopes,
-      client_id: process.env.CLIENT_ID
-    });
-    return res.status(401).json({ error: 'User not authenticated. Please log in.', loginUrl });
-  }
-
   // Support both legacy and MCP tool-style payloads
   let filename, content, isBase64, folderId;
   if (req.body.tool === 'Upload_Document' && req.body.args) {
@@ -304,8 +276,7 @@ app.post('/upload-file-api', async (req, res) => {
   // Add more types as needed
   try {
     await ensureServerInitialized();
-    await ensureValidAccessToken();
-    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+    const drive = google.drive({ version: 'v3', auth });
     // Add folderId as parent if provided
     const fileMetadata = folderId ? { name: filename, parents: [folderId] } : { name: filename };
     const media = {
