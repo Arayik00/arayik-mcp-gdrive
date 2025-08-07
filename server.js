@@ -37,6 +37,7 @@ const { google } = require('googleapis');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const JSON5 = require('json5');
 const app = express();
 app.use(express.json());
 
@@ -44,7 +45,7 @@ app.use(express.json());
 function getDecodedServiceAccountKey(b64FilePath) {
   const b64 = fs.readFileSync(b64FilePath, 'utf8');
   const jsonStr = Buffer.from(b64, 'base64').toString('utf8');
-  return JSON.parse(jsonStr);
+  return JSON5.parse(jsonStr);
 }
 
 const SERVICE_ACCOUNT_KEY_B64_PATH = path.join(__dirname, 'gdrive-mcp-service-key.b64');
