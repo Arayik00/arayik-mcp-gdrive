@@ -35,18 +35,25 @@ require('dotenv').config();
 const express = require('express');
 const { google } = require('googleapis');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const app = express();
 app.use(express.json());
 
-const SERVICE_ACCOUNT_KEY_PATH = path.join(__dirname, 'gdrive-mcp-service-key.json');
+// Decodes base64 file and returns parsed JSON
+function getDecodedServiceAccountKey(b64FilePath) {
+  const b64 = fs.readFileSync(b64FilePath, 'utf8');
+  const jsonStr = Buffer.from(b64, 'base64').toString('utf8');
+  return JSON.parse(jsonStr);
+}
+
+const SERVICE_ACCOUNT_KEY_B64_PATH = path.join(__dirname, 'gdrive-mcp-service-key.b64');
+const serviceAccountKey = getDecodedServiceAccountKey(SERVICE_ACCOUNT_KEY_B64_PATH);
 const auth = new google.auth.GoogleAuth({
-  keyFile: SERVICE_ACCOUNT_KEY_PATH,
-  scopes: ['https://www.googleapis.com/auth/drive'],
+  credentials: serviceAccountKey,
+  scopes: ['https://www.googleapis.com/auth/drive']
 });
 const drive = google.drive({ version: 'v3', auth });
-
-const fs = require('fs');
-const path = require('path');
 
 // Helper to ensure valid access token before each API call
 // Helper: Wait for /health to return 200 before making Drive API calls
@@ -73,103 +80,26 @@ async function ensureServerInitialized() {
 app.post('/initialize', (req, res) => {
   const env = req.body && req.body.env ? req.body.env : {};
   console.log('MCP /initialize received env:', env);
-  // Dynamically update process.env and OAuth client if env is provided
-  if (env.CLIENT_ID) process.env.CLIENT_ID = env.CLIENT_ID;
-  if (env.CLIENT_SECRET) process.env.CLIENT_SECRET = env.CLIENT_SECRET;
-  if (env.REDIRECT_URI) process.env.REDIRECT_URI = env.REDIRECT_URI;
+  // Dynamically update process.env if env is provided
   if (env.GDRIVE_CREDS_DIR) process.env.GDRIVE_CREDS_DIR = env.GDRIVE_CREDS_DIR;
-
-  // Re-initialize oauth2Client if any env changed
-  oauth2Client._clientId = process.env.CLIENT_ID;
-  oauth2Client._clientSecret = process.env.CLIENT_SECRET;
-  oauth2Client.redirectUri = process.env.REDIRECT_URI;
-
   res.json({
     status: 'ok',
     server: 'arayik-mcp-gdrive',
     capabilities: ['list-files', 'read-file', 'update-file'],
     message: 'MCP server initialized with dynamic env.',
     env: {
-      CLIENT_ID: process.env.CLIENT_ID,
-      CLIENT_SECRET: process.env.CLIENT_SECRET,
-      REDIRECT_URI: process.env.REDIRECT_URI,
       GDRIVE_CREDS_DIR: process.env.GDRIVE_CREDS_DIR
     }
   });
 });
 
-// Load tokens from disk if available
-
-// If GDRIVE_TOKEN is not set, userTokens will be null and OAuth flow will be required
 
 app.get('/', (req, res) => {
   res.send('arayik-mcp-gdrive server is running!');
 });
 
 app.get('/health', (req, res) => {
-  let tokenStatus = fs.existsSync(TOKEN_PATH) ? 'set' : 'not set';
-  let tokenValue = null;
-  if (tokenStatus === 'set') {
-    try {
-      tokenValue = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
-    } catch (err) {
-      tokenValue = 'error reading token';
-    }
-  }
-  res.json({ status: 'ok', gdrive_token_status: tokenStatus, gdrive_token_value: tokenValue });
-});
-
-app.get('/auth/login', (req, res) => {
-  // Allow override of CLIENT_ID, CLIENT_SECRET, REDIRECT_URI from query params
-  const clientId = req.query.CLIENT_ID || process.env.CLIENT_ID;
-  const clientSecret = req.query.CLIENT_SECRET || process.env.CLIENT_SECRET;
-  const redirectUri = req.query.REDIRECT_URI || process.env.REDIRECT_URI;
-
-  // Update oauth2Client with new values if provided
-  oauth2Client._clientId = clientId;
-  oauth2Client._clientSecret = clientSecret;
-  oauth2Client.redirectUri = redirectUri;
-
-  const scopes = [
-    'https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/drive.file',
-    'https://www.googleapis.com/auth/drive.metadata',
-    'openid',
-    'email',
-    'profile'
-  ];
-  const url = oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: scopes,
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    prompt: 'consent'
-  });
-  res.redirect(url);
-});
-
-app.get('/auth/callback', async (req, res) => {
-  const code = req.query.code;
-  if (!code) return res.status(400).send('Missing authorization code');
-  try {
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
-    userTokens = tokens;
-    userTokens.last_refreshed = Date.now();
-    // Remove old token file before saving new one
-    try {
-      if (fs.existsSync(TOKEN_PATH)) {
-        fs.unlinkSync(TOKEN_PATH);
-      }
-      fs.writeFileSync(TOKEN_PATH, JSON.stringify(userTokens, null, 2), 'utf8');
-      console.log('Saved Google Drive tokens to gdrive_tokens.json.');
-    } catch (err) {
-      console.warn('Failed to save Google Drive tokens:', err.message);
-    }
-    res.redirect('/list-files');
-  } catch (err) {
-    res.status(500).send('Authentication failed: ' + err.message);
-  }
+  res.json({ status: 'ok' });
 });
 
 app.get('/list-files', async (req, res) => {
