@@ -34,67 +34,40 @@ if (!process.env.MCP_DISABLE_STDIO) {
 require('dotenv').config();
 const express = require('express');
 const { google } = require('googleapis');
+const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/auth/callback';
+const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_APPLICATION_CREDENTIALS || './gdrive-mcp-service-key.json';
+const auth = new google.auth.GoogleAuth({
+  keyFile: SERVICE_ACCOUNT_KEY_PATH,
+  scopes: ['https://www.googleapis.com/auth/drive'],
+});
+const drive = google.drive({ version: 'v3', auth });
 
 const fs = require('fs');
 const path = require('path');
 
-// Use local file for token storage
-const TOKEN_PATH = path.join(__dirname, 'gdrive_tokens.json');
-let userTokens = null;
-let oauth2Client;
-if (fs.existsSync(TOKEN_PATH)) {
-  try {
-    userTokens = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
-    oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-    oauth2Client.setCredentials(userTokens);
-    if (!userTokens.last_refreshed) {
-      userTokens.last_refreshed = Date.now();
-      fs.writeFileSync(TOKEN_PATH, JSON.stringify(userTokens, null, 2), 'utf8');
-    }
-    console.log('Loaded Google Drive tokens from gdrive_tokens.json.');
-  } catch (err) {
-    console.warn('Failed to load Google Drive tokens:', err.message);
-    oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-  }
-} else {
-  oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-}
-
 // Helper to ensure valid access token before each API call
-async function ensureValidAccessToken() {
-  if (!userTokens) return;
-  const now = Date.now();
-  const lastRefreshed = userTokens.last_refreshed || 0;
-  const oneHour = 60 * 60 * 1000;
-  let needsRefresh = false;
-  if (!userTokens.access_token || (now - lastRefreshed) > oneHour) {
-    needsRefresh = true;
-  }
-  if (needsRefresh) {
+// Helper: Wait for /health to return 200 before making Drive API calls
+async function ensureServerInitialized() {
+  const url = 'https://arayik-mcp-gdrive.onrender.com/health';
+  let initialized = false;
+  while (!initialized) {
     try {
-      // Use refresh token to get a new access token
-      const tokens = await oauth2Client.refreshAccessToken();
-      oauth2Client.setCredentials(tokens.credentials);
-      userTokens.access_token = tokens.credentials.access_token;
-      if (tokens.credentials.expiry_date) userTokens.expiry_date = tokens.credentials.expiry_date;
-      if (tokens.credentials.refresh_token) userTokens.refresh_token = tokens.credentials.refresh_token;
-      userTokens.last_refreshed = Date.now();
-      fs.writeFileSync(TOKEN_PATH, JSON.stringify(userTokens, null, 2), 'utf8');
-      console.log('Manually refreshed and saved new Google Drive access token.');
+      const res = await axios.get(url);
+      if (res.status === 200) {
+        initialized = true;
+      } else {
+        await new Promise(r => setTimeout(r, 2000));
+      }
     } catch (err) {
-      console.warn('Failed to manually refresh access token:', err.message);
+      await new Promise(r => setTimeout(r, 2000));
     }
-  } else {
-    // Set credentials in case they were updated elsewhere
-    oauth2Client.setCredentials(userTokens);
   }
 }
+// Service account authentication does not require token refresh logic.
+// Remove ensureValidAccessToken and all token management.
 
 // MCP /initialize endpoint for protocol handshake and dynamic env
 app.post('/initialize', (req, res) => {
@@ -202,6 +175,7 @@ app.get('/auth/callback', async (req, res) => {
 app.get('/list-files', async (req, res) => {
   if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
   try {
+    await ensureServerInitialized();
     await ensureValidAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     const result = await drive.files.list({ pageSize: 10 });
@@ -216,6 +190,7 @@ app.get('/read-file/:id', async (req, res) => {
   if (!userTokens) return res.status(401).json({ error: 'User not authenticated. Please log in at /auth/login.' });
   const fileId = req.params.id;
   try {
+    await ensureServerInitialized();
     await ensureValidAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     // Get file metadata
@@ -241,6 +216,7 @@ app.post('/update-file/:id', async (req, res) => {
     finalMimeType = fileId.endsWith('.md') ? 'text/markdown' : 'text/plain';
   }
   try {
+    await ensureServerInitialized();
     await ensureValidAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     await drive.files.update({
@@ -327,6 +303,7 @@ app.post('/upload-file-api', async (req, res) => {
   }
   // Add more types as needed
   try {
+    await ensureServerInitialized();
     await ensureValidAccessToken();
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
     // Add folderId as parent if provided
