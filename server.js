@@ -38,7 +38,7 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_APPLICATION_CREDENTIALS || './gdrive-mcp-service-key.json';
+const SERVICE_ACCOUNT_KEY_PATH = path.join(__dirname, 'gdrive-mcp-service-key.json');
 const auth = new google.auth.GoogleAuth({
   keyFile: SERVICE_ACCOUNT_KEY_PATH,
   scopes: ['https://www.googleapis.com/auth/drive'],
