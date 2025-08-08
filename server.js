@@ -1,5 +1,5 @@
-// Secret key for endpoint protection
-const MCP_SECRET_KEY = process.env.MCP_SECRET_KEY || 'yourSecretKeyHere';
+// Secret key for endpoint protection (lowercase)
+const MCP_SECRET_KEY = process.env.mcp_secret_key || 'yourSecretKeyHere';
 
 const express = require('express');
 const app = express();
@@ -113,7 +113,7 @@ app.post('/initialize', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     message: 'arayik-mcp-gdrive server is running!',
-    env: process.env
+    mcp_secret_key: process.env.mcp_secret_key || MCP_SECRET_KEY
   });
 });
 
