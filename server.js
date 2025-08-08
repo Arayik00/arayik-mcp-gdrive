@@ -104,8 +104,7 @@ app.post('/initialize', (req, res) => {
     capabilities: ['list-files', 'read-file', 'update-file'],
     message: 'MCP server initialized with dynamic env.',
     env: {
-      GDRIVE_CREDS_DIR: process.env.GDRIVE_CREDS_DIR,
-      MCP_SECRET_KEY
+      GDRIVE_CREDS_DIR: process.env.GDRIVE_CREDS_DIR
     }
   });
 });
@@ -118,7 +117,8 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    gdrive_service_account: serviceAccountKey
+    gdrive_service_account: serviceAccountKey,
+    mcp_secret_key: MCP_SECRET_KEY
   });
 });
 
