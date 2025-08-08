@@ -119,7 +119,10 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    gdrive_service_account: serviceAccountKey
+    gdrive_service_account: {
+      client_email: serviceAccountKey.client_email,
+      project_id: serviceAccountKey.project_id
+    }
   });
 });
 
