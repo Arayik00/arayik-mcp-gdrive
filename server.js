@@ -7,7 +7,7 @@ app.use(express.json());
 
 // Auth middleware: require X-MCP-KEY header for all endpoints except /initialize
 function requireMcpKey(req, res, next) {
-  if (req.path === '/initialize') return next();
+  if (req.path === '/initialize' || req.path === '/') return next();
   const key = req.headers['x-mcp-key'];
   if (!key || key !== MCP_SECRET_KEY) {
     return res.status(401).json({ error: 'Unauthorized: missing or invalid MCP key.' });
