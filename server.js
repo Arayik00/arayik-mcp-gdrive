@@ -50,13 +50,11 @@ if (!process.env.MCP_DISABLE_STDIO) {
 }
 // arayik-mcp-gdrive: Node.js MCP server for Google Drive
 require('dotenv').config();
-const express = require('express');
 const { google } = require('googleapis');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const JSON5 = require('json5');
-app.use(express.json());
 
 // Decodes base64 file and returns parsed JSON
 function getDecodedServiceAccountKey(b64FilePath) {
