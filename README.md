@@ -1,43 +1,36 @@
+
 # arayik-mcp-gdrive
 
-A Node.js MCP server for Google Drive integration. Supports OAuth2 authentication, file upload, metadata, and programmatic API access.
+A Node.js MCP server for Google Drive integration using a Google service account. Endpoints are protected by a secret MCP key and do not require OAuth2.
 
 ## Features
-- Google Drive OAuth2 authentication
+- Google Drive service account authentication (no OAuth2 required)
 - List, read, update, and upload files
+- Endpoints protected by MCP secret key
 - Programmatic file upload via JSON API
-- Token persistence for cloud deployment
 
 ## Setup
 1. Clone the repo and run `npm install`.
-2. Copy `.env.example` to `.env` and fill in your Google credentials.
-3. Start the server: `npm start`
-4. Visit `/auth/login` in your browser and complete Google authentication.
+2. Add your base64-encoded Google service account key as `gdrive-mcp-service-key.b64` in the project root.
+3. Set your MCP secret key in the environment: `export mcp_secret_key=YOUR_SECRET_KEY`
+4. Start the server: `npm start`
 
 ## Endpoints & Tools
 
-### Main API Endpoints
+### Main API Endpoints (all require `X-MCP-KEY` header)
 
-- `GET /list-files` — Lists all files in the connected Google Drive account.
+- `GET /list-files` — Lists files in the service account's Google Drive.
 - `GET /read-file/:id` — Reads the contents of a file by its ID.
 - `POST /update-file/:id` — Updates the contents of a file by its ID.
-
-### Other Endpoints
-
-- `GET /health` — Health check
-- `GET /auth/login` — Start OAuth2 login
-- `GET /auth/callback` — OAuth2 callback
-- `POST /upload-file` — Upload file (multipart/form-data)
-- `POST /upload-file-api` — Upload file (JSON, base64 content)
+- `POST /upload-file-api` — Upload file (JSON, base64 or plain text content)
+- `GET /health` — Health check (shows minimal service account info)
 
 ## Deployment
 - Works locally and in the cloud (Render, Railway, Heroku, etc.)
-- Set `REDIRECT_URI` in `.env` and Google Cloud Console to your public domain
+- Set your MCP secret key in your cloud environment settings
 - Use `.gitignore` to exclude sensitive files
 
 ## Security
-- Do not commit `.env` or `gdrive_tokens.json` to public repos
-- Protect endpoints with authentication if deploying publicly
-
-## License
-MIT
+- Do not commit service account keys or secrets to public repos
+- All endpoints are protected by the MCP secret key
+- Only requests with the correct `X-MCP-KEY` header are authorized
