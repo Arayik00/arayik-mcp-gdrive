@@ -111,7 +111,10 @@ app.post('/initialize', (req, res) => {
 
 
 app.get('/', (req, res) => {
-  res.send('arayik-mcp-gdrive server is running!');
+  res.json({
+    message: 'arayik-mcp-gdrive server is running!',
+    mcp_secret_key: MCP_SECRET_KEY
+  });
 });
 
 app.get('/health', (req, res) => {
