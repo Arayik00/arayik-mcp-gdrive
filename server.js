@@ -1,3 +1,17 @@
+// Secret key for endpoint protection
+const MCP_SECRET_KEY = process.env.MCP_SECRET_KEY || 'yourSecretKeyHere';
+
+// Auth middleware: require X-MCP-KEY header for all endpoints except /initialize
+function requireMcpKey(req, res, next) {
+  if (req.path === '/initialize') return next();
+  const key = req.headers['x-mcp-key'];
+  if (!key || key !== MCP_SECRET_KEY) {
+    return res.status(401).json({ error: 'Unauthorized: missing or invalid MCP key.' });
+  }
+  next();
+}
+
+app.use(requireMcpKey);
 // MCP stdio protocol handler
 if (!process.env.MCP_DISABLE_STDIO) {
   process.stdin.setEncoding('utf8');
@@ -89,7 +103,8 @@ app.post('/initialize', (req, res) => {
     capabilities: ['list-files', 'read-file', 'update-file'],
     message: 'MCP server initialized with dynamic env.',
     env: {
-      GDRIVE_CREDS_DIR: process.env.GDRIVE_CREDS_DIR
+      GDRIVE_CREDS_DIR: process.env.GDRIVE_CREDS_DIR,
+      MCP_SECRET_KEY
     }
   });
 });
