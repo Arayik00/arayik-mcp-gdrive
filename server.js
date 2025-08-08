@@ -1,6 +1,10 @@
 // Secret key for endpoint protection
 const MCP_SECRET_KEY = process.env.MCP_SECRET_KEY || 'yourSecretKeyHere';
 
+const express = require('express');
+const app = express();
+app.use(express.json());
+
 // Auth middleware: require X-MCP-KEY header for all endpoints except /initialize
 function requireMcpKey(req, res, next) {
   if (req.path === '/initialize') return next();
@@ -52,7 +56,6 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const JSON5 = require('json5');
-const app = express();
 app.use(express.json());
 
 // Decodes base64 file and returns parsed JSON
