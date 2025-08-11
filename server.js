@@ -74,7 +74,11 @@ async function ensureServerInitialized() {
   let initialized = false;
   while (!initialized) {
     try {
-      const res = await axios.get(url);
+      const res = await axios.get(url, {
+        headers: {
+          'X-MCP-KEY': MCP_SECRET_KEY
+        }
+      });
       if (res.status === 200) {
         initialized = true;
       } else {
@@ -139,7 +143,7 @@ app.get('/health', (req, res) => {
 app.get('/list-files', async (req, res) => {
   try {
     console.log('Received /list-files request');
-    // await ensureServerInitialized();
+    await ensureServerInitialized();
     console.log('Server initialized, calling Google Drive API...');
     const drive = google.drive({ version: 'v3', auth });
     const result = await drive.files.list({ pageSize: 10 });
