@@ -119,13 +119,21 @@ app.get('/health', (req, res) => {
   } else {
     console.log('gdrive_mcp_service_key is not set');
   }
-  res.json({
-    status: 'ok',
-    gdrive_service_account: {
-      client_email: serviceAccountKey.client_email,
-      project_id: serviceAccountKey.project_id
-    }
-  });
+  try {
+    res.status(200).json({
+      status: 'ok',
+      gdrive_service_account: {
+        client_email: serviceAccountKey.client_email,
+        project_id: serviceAccountKey.project_id
+      }
+    });
+  } catch (err) {
+    // Always return status 200, but include error info
+    res.status(200).json({
+      status: 'error',
+      error: err.message
+    });
+  }
 });
 
 app.get('/list-files', async (req, res) => {
