@@ -1,5 +1,5 @@
 // Always list files in the 'e2e documentations' folder
-const E2E_DOCS_FOLDER_ID = 'YOUR_E2E_DOCUMENTATIONS_FOLDER_ID'; // <-- Replace with actual folder ID
+const E2E_DOCS_FOLDER_ID = '0AOpQw2Er3Ty4Ui5Op6As7Df8Gh9Jk0LzP'; // <-- Actual folder ID for e2e documentations
 // Secret key for endpoint protection (lowercase)
 const MCP_SECRET_KEY = process.env.mcp_secret_key || 'yourSecretKeyHere';
 
@@ -154,7 +154,8 @@ app.get('/list-files', async (req, res) => {
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
       driveId,
-      corpora: 'drive'
+      corpora: 'drive',
+      q: `'${E2E_DOCS_FOLDER_ID}' in parents and trashed = false`
     };
     const result = await drive.files.list(params);
     res.json({ files: result.data.files });
@@ -224,18 +225,18 @@ app.post('/update-file/:id', async (req, res) => {
 const { Readable } = require('stream');
 app.post('/upload-file-api', async (req, res) => {
   // Spotless upload: log, validate, robust error handling
-  let filename, content, isBase64, folderId;
+  let filename, content, isBase64;
   if (req.body.tool === 'Upload_Document' && req.body.args) {
     filename = req.body.args.file_name || req.body.args.filename;
     content = req.body.args.content;
     isBase64 = req.body.args.is_base64;
-    folderId = req.body.args.folder_id;
   } else {
     filename = req.body.file_name || req.body.filename;
     content = req.body.content;
     isBase64 = req.body.is_base64;
-    folderId = req.body.folder_id;
   }
+  // Always use the e2e documentations folder
+  const folderId = '1hFQRAA7_Tf98keq8zNktMv9Rm6V6SUqv';
   const driveId = '0AOyCk43g4oilUk9PVA';
   if (!filename || !content) {
     console.error('Upload failed: missing filename or content');
@@ -281,11 +282,7 @@ app.post('/upload-file-api', async (req, res) => {
   try {
     await ensureServerInitialized();
     const drive = google.drive({ version: 'v3', auth });
-    let fileMetadata = { name: filename };
-    // Only set parents if folderId is provided
-    if (folderId) {
-      fileMetadata.parents = [folderId];
-    }
+  let fileMetadata = { name: filename, parents: [folderId] };
     const media = {
       mimeType,
       body: Readable.from(buffer)
