@@ -1,5 +1,6 @@
 // Always list files in the 'e2e documentations' folder
-const E2E_DOCS_FOLDER_ID = '0AOpQw2Er3Ty4Ui5Op6As7Df8Gh9Jk0LzP'; // <-- Actual folder ID for e2e documentations
+const DRIVE_ID = process.env.gdrive_id;
+const FOLDER_ID = process.env.gdrive_folder_id;
 // Secret key for endpoint protection (lowercase)
 const MCP_SECRET_KEY = process.env.mcp_secret_key || 'yourSecretKeyHere';
 
@@ -148,14 +149,14 @@ app.get('/list-files', async (req, res) => {
     await ensureServerInitialized();
     const drive = google.drive({ version: 'v3', auth });
     // Accept driveId as query param for shared drive support
-    const driveId = '0AOyCk43g4oilUk9PVA';
+  const driveId = DRIVE_ID;
     const params = {
       pageSize: 10,
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
       driveId,
       corpora: 'drive',
-      q: `'${E2E_DOCS_FOLDER_ID}' in parents and trashed = false`
+      q: `'${FOLDER_ID}' in parents and trashed = false`
     };
     const result = await drive.files.list(params);
     res.json({ files: result.data.files });
@@ -168,7 +169,7 @@ app.get('/list-files', async (req, res) => {
 // Read file metadata and content
 app.get('/read-file/:id', async (req, res) => {
   const fileId = req.params.id;
-  const driveId = '0AOyCk43g4oilUk9PVA';
+  const driveId = DRIVE_ID;
   try {
     await ensureServerInitialized();
     const drive = google.drive({ version: 'v3', auth });
@@ -197,7 +198,7 @@ app.post('/update-file/:id', async (req, res) => {
   const fileId = req.params.id;
   // Accept JSON body: { content, mimeType }
   const { content, mimeType } = req.body || {};
-  const driveId = '0AOyCk43g4oilUk9PVA';
+  const driveId = DRIVE_ID;
   if (!content) return res.status(400).json({ error: 'Missing content.' });
   let finalMimeType = mimeType;
   if (!finalMimeType) {
@@ -235,9 +236,9 @@ app.post('/upload-file-api', async (req, res) => {
     content = req.body.content;
     isBase64 = req.body.is_base64;
   }
-  // Always use the e2e documentations folder
-  const folderId = '1hFQRAA7_Tf98keq8zNktMv9Rm6V6SUqv';
-  const driveId = '0AOyCk43g4oilUk9PVA';
+  // Always use env folderId for all uploads
+  const folderId = FOLDER_ID;
+  const driveId = DRIVE_ID;
   if (!filename || !content) {
     console.error('Upload failed: missing filename or content');
     return res.status(400).json({ error: 'Missing filename or content.' });
