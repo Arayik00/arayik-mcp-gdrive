@@ -270,14 +270,10 @@ app.post('/upload-file-api', async (req, res) => {
   try {
     await ensureServerInitialized();
     const drive = google.drive({ version: 'v3', auth });
-    // Build file metadata
+    // Build file metadata: add parents only if folderId is provided
     let fileMetadata = { name: filename };
     if (folderId) {
       fileMetadata.parents = [folderId];
-    }
-    // For shared drive root upload, add driveId to metadata
-    if (!folderId) {
-      fileMetadata.driveId = driveId;
     }
     const media = {
       mimeType,
