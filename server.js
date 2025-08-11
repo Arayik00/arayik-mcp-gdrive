@@ -1,3 +1,5 @@
+// Always list files in the 'e2e documentations' folder
+const E2E_DOCS_FOLDER_ID = 'YOUR_E2E_DOCUMENTATIONS_FOLDER_ID'; // <-- Replace with actual folder ID
 // Secret key for endpoint protection (lowercase)
 const MCP_SECRET_KEY = process.env.mcp_secret_key || 'yourSecretKeyHere';
 
