@@ -7,7 +7,7 @@ app.use(express.json());
 
 // Auth middleware: require X-MCP-KEY header for all endpoints except /initialize
 function requireMcpKey(req, res, next) {
-  if (req.path === '/initialize' || req.path === '/') return next();
+  if (req.path === '/initialize' || req.path === '/' || req.path === '/health') return next();
   const key = req.headers['x-mcp-key'];
   if (!key || key !== MCP_SECRET_KEY) {
     return res.status(401).json({ error: 'Unauthorized: missing or invalid MCP key.' });
@@ -139,7 +139,7 @@ app.get('/health', (req, res) => {
 app.get('/list-files', async (req, res) => {
   try {
     console.log('Received /list-files request');
-    await ensureServerInitialized();
+    // await ensureServerInitialized();
     console.log('Server initialized, calling Google Drive API...');
     const drive = google.drive({ version: 'v3', auth });
     const result = await drive.files.list({ pageSize: 10 });
