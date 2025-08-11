@@ -53,18 +53,14 @@ require('dotenv').config();
 const { google } = require('googleapis');
 const axios = require('axios');
 const fs = require('fs');
-const path = require('path');
 const JSON5 = require('json5');
 
-// Decodes base64 file and returns parsed JSON
-function getDecodedServiceAccountKey(b64FilePath) {
-  const b64 = fs.readFileSync(b64FilePath, 'utf8');
-  const jsonStr = Buffer.from(b64, 'base64').toString('utf8');
-  return JSON5.parse(jsonStr);
-}
 
-const SERVICE_ACCOUNT_KEY_B64_PATH = path.join(__dirname, 'gdrive-mcp-service-key.b64');
-const serviceAccountKey = getDecodedServiceAccountKey(SERVICE_ACCOUNT_KEY_B64_PATH);
+// Load Google Drive service account key from environment variable (JSON object)
+if (!process.env.gdrive_mcp_service_key) {
+  throw new Error('gdrive_mcp_service_key environment variable is required.');
+}
+const serviceAccountKey = JSON5.parse(process.env.gdrive_mcp_service_key);
 const auth = new google.auth.GoogleAuth({
   credentials: serviceAccountKey,
   scopes: ['https://www.googleapis.com/auth/drive']
@@ -117,6 +113,12 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+  // Print the first 100 characters of the env variable for debugging (do not print the whole key for security)
+  if (process.env.gdrive_mcp_service_key) {
+    console.log('gdrive_mcp_service_key (first 100 chars):', process.env.gdrive_mcp_service_key.slice(0, 100));
+  } else {
+    console.log('gdrive_mcp_service_key is not set');
+  }
   res.json({
     status: 'ok',
     gdrive_service_account: {
@@ -128,11 +130,15 @@ app.get('/health', (req, res) => {
 
 app.get('/list-files', async (req, res) => {
   try {
+    console.log('Received /list-files request');
     await ensureServerInitialized();
+    console.log('Server initialized, calling Google Drive API...');
     const drive = google.drive({ version: 'v3', auth });
     const result = await drive.files.list({ pageSize: 10 });
+    console.log('Google Drive API responded, sending files...');
     res.json({ files: result.data.files });
   } catch (err) {
+    console.error('Error in /list-files:', err);
     res.status(500).json({ error: err.message });
   }
 });
