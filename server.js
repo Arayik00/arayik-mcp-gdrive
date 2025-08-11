@@ -221,8 +221,7 @@ app.post('/update-file/:id', async (req, res) => {
 // Upload a new file via JSON (base64 content)
 const { Readable } = require('stream');
 app.post('/upload-file-api', async (req, res) => {
-  // Always use latest env
-  // Support both legacy and MCP tool-style payloads
+  // Spotless upload: log, validate, robust error handling
   let filename, content, isBase64, folderId;
   if (req.body.tool === 'Upload_Document' && req.body.args) {
     filename = req.body.args.file_name || req.body.args.filename;
@@ -237,11 +236,28 @@ app.post('/upload-file-api', async (req, res) => {
   }
   const driveId = '0AOyCk43g4oilUk9PVA';
   if (!filename || !content) {
+    console.error('Upload failed: missing filename or content');
     return res.status(400).json({ error: 'Missing filename or content.' });
   }
-  // Validate filename
   if (typeof filename !== 'string' || filename.length < 3) {
+    console.error('Upload failed: invalid filename', filename);
     return res.status(400).json({ error: 'Invalid filename.' });
+  }
+  // Supported MIME types
+  const mimeTypes = {
+    '.md': 'text/markdown',
+    '.html': 'application/vnd.google-apps.document',
+    '.json': 'application/json',
+    '.txt': 'text/plain',
+    '.csv': 'text/csv',
+    '.pdf': 'application/pdf'
+  };
+  let mimeType = 'text/plain';
+  for (const ext in mimeTypes) {
+    if (filename.endsWith(ext)) {
+      mimeType = mimeTypes[ext];
+      break;
+    }
   }
   // Handle base64 or raw text
   let buffer;
@@ -252,26 +268,19 @@ app.post('/upload-file-api', async (req, res) => {
         throw new Error('Decoded content is empty or invalid base64.');
       }
     } catch (e) {
+      console.error('Base64 decode failed:', e.message);
       return res.status(400).json({ error: 'Base64 decode failed: ' + e.message });
     }
   } else {
     buffer = Buffer.from(content, 'utf8');
   }
-  // Auto-detect MIME type
-  let mimeType = 'text/plain';
-  if (filename.endsWith('.md')) {
-    mimeType = 'text/markdown';
-  } else if (filename.endsWith('.html')) {
-    mimeType = 'application/vnd.google-apps.document';
-  } else if (filename.endsWith('.json')) {
-    mimeType = 'application/json';
-  }
-  // Add more types as needed
+  // Log upload attempt
+  console.log(`Uploading file: ${filename} to ${folderId ? 'folder ' + folderId : 'shared drive root'} with MIME type ${mimeType}`);
   try {
     await ensureServerInitialized();
     const drive = google.drive({ version: 'v3', auth });
-    // Build file metadata: add parents only if folderId is provided
     let fileMetadata = { name: filename };
+    // Only set parents if folderId is provided
     if (folderId) {
       fileMetadata.parents = [folderId];
     }
@@ -287,8 +296,10 @@ app.post('/upload-file-api', async (req, res) => {
       driveId
     };
     const result = await drive.files.create(params);
+    console.log('Upload successful:', result.data);
     res.json({ success: true, file: result.data });
   } catch (err) {
+    console.error('Google Drive upload failed:', err.message);
     res.status(500).json({ error: 'Google Drive upload failed: ' + err.message });
   }
 });
