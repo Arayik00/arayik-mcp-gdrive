@@ -146,16 +146,14 @@ app.get('/list-files', async (req, res) => {
     await ensureServerInitialized();
     const drive = google.drive({ version: 'v3', auth });
     // Accept driveId as query param for shared drive support
-    const { driveId } = req.query;
+    const driveId = '0AOyCk43g4oilUk9PVA';
     const params = {
       pageSize: 10,
       supportsAllDrives: true,
-      includeItemsFromAllDrives: true
+      includeItemsFromAllDrives: true,
+      driveId,
+      corpora: 'drive'
     };
-    if (driveId) {
-      params.driveId = driveId;
-      params.corpora = 'drive';
-    }
     const result = await drive.files.list(params);
     res.json({ files: result.data.files });
   } catch (err) {
@@ -167,7 +165,7 @@ app.get('/list-files', async (req, res) => {
 // Read file metadata and content
 app.get('/read-file/:id', async (req, res) => {
   const fileId = req.params.id;
-  const { driveId } = req.query;
+  const driveId = '0AOyCk43g4oilUk9PVA';
   try {
     await ensureServerInitialized();
     const drive = google.drive({ version: 'v3', auth });
@@ -175,14 +173,14 @@ app.get('/read-file/:id', async (req, res) => {
     const meta = await drive.files.get({
       fileId,
       supportsAllDrives: true,
-      ...(driveId ? { driveId } : {})
+      driveId
     });
     // Get file content (as plain text)
     const content = await drive.files.get({
       fileId,
       alt: 'media',
       supportsAllDrives: true,
-      ...(driveId ? { driveId } : {})
+      driveId
     }, { responseType: 'text' });
     res.json({ metadata: meta.data, content: content.data });
   } catch (err) {
@@ -194,8 +192,9 @@ app.get('/read-file/:id', async (req, res) => {
 // Update file content (plain text)
 app.post('/update-file/:id', async (req, res) => {
   const fileId = req.params.id;
-  // Accept JSON body: { content, mimeType, driveId }
-  const { content, mimeType, driveId } = req.body || {};
+  // Accept JSON body: { content, mimeType }
+  const { content, mimeType } = req.body || {};
+  const driveId = '0AOyCk43g4oilUk9PVA';
   if (!content) return res.status(400).json({ error: 'Missing content.' });
   let finalMimeType = mimeType;
   if (!finalMimeType) {
@@ -207,7 +206,7 @@ app.post('/update-file/:id', async (req, res) => {
     await drive.files.update({
       fileId,
       supportsAllDrives: true,
-      ...(driveId ? { driveId } : {}),
+      driveId,
       media: {
         mimeType: finalMimeType,
         body: Buffer.from(content, 'utf8')
@@ -224,20 +223,19 @@ const { Readable } = require('stream');
 app.post('/upload-file-api', async (req, res) => {
   // Always use latest env
   // Support both legacy and MCP tool-style payloads
-  let filename, content, isBase64, folderId, driveId;
+  let filename, content, isBase64, folderId;
   if (req.body.tool === 'Upload_Document' && req.body.args) {
     filename = req.body.args.file_name || req.body.args.filename;
     content = req.body.args.content;
     isBase64 = req.body.args.is_base64;
     folderId = req.body.args.folder_id;
-    driveId = req.body.args.drive_id;
   } else {
     filename = req.body.file_name || req.body.filename;
     content = req.body.content;
     isBase64 = req.body.is_base64;
     folderId = req.body.folder_id;
-    driveId = req.body.drive_id;
   }
+  const driveId = '0AOyCk43g4oilUk9PVA';
   if (!filename || !content) {
     return res.status(400).json({ error: 'Missing filename or content.' });
   }
@@ -278,7 +276,7 @@ app.post('/upload-file-api', async (req, res) => {
       fileMetadata.parents = [folderId];
     }
     // For shared drive root upload, add driveId to metadata
-    if (driveId && !folderId) {
+    if (!folderId) {
       fileMetadata.driveId = driveId;
     }
     const media = {
@@ -289,11 +287,9 @@ app.post('/upload-file-api', async (req, res) => {
       resource: fileMetadata,
       media,
       fields: 'id, name, parents',
-      supportsAllDrives: true
+      supportsAllDrives: true,
+      driveId
     };
-    if (driveId) {
-      params.driveId = driveId;
-    }
     const result = await drive.files.create(params);
     res.json({ success: true, file: result.data });
   } catch (err) {
