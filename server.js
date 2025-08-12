@@ -223,6 +223,24 @@ app.post('/update-file/:id', async (req, res) => {
 });
 
 // Upload a new file via JSON (base64 content)
+// Delete a file by ID
+app.post('/delete-file/:id', async (req, res) => {
+  const fileId = req.params.id;
+  const driveId = DRIVE_ID;
+  try {
+    await ensureServerInitialized();
+    const drive = google.drive({ version: 'v3', auth });
+    await drive.files.delete({
+      fileId,
+      supportsAllDrives: true,
+      driveId
+    });
+    res.json({ success: true, fileId });
+  } catch (err) {
+    console.error('Google Drive delete failed:', err.message);
+    res.status(500).json({ error: 'Google Drive delete failed: ' + err.message });
+  }
+});
 const { Readable } = require('stream');
 app.post('/upload-file-api', async (req, res) => {
   // Spotless upload: log, validate, robust error handling
