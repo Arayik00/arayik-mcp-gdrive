@@ -244,17 +244,15 @@ app.post('/delete-file/:id', async (req, res) => {
 const { Readable } = require('stream');
 app.post('/upload-file-api', async (req, res) => {
   // Spotless upload: log, validate, robust error handling
-  let filename, content, isBase64, docType;
+  let filename, content, isBase64;
   if (req.body.tool === 'Upload_Document' && req.body.args) {
     filename = req.body.args.file_name || req.body.args.filename;
     content = req.body.args.content;
     isBase64 = req.body.args.is_base64;
-    docType = req.body.args.doc_type;
   } else {
     filename = req.body.file_name || req.body.filename;
     content = req.body.content;
     isBase64 = req.body.is_base64;
-    docType = req.body.doc_type;
   }
   const folderId = FOLDER_ID;
   const driveId = DRIVE_ID;
@@ -266,46 +264,10 @@ app.post('/upload-file-api', async (req, res) => {
     console.error('Upload failed: invalid filename', filename);
     return res.status(400).json({ error: 'Invalid filename.' });
   }
-  // If docType is 'gdoc', create a Google Doc using Docs API
-  if (docType === 'gdoc') {
-    try {
-      await ensureServerInitialized();
-      const docs = google.docs({ version: 'v1', auth });
-      // Create the document
-      const docRes = await docs.documents.create({
-        requestBody: {
-          title: filename.replace(/\.gdoc$/, '')
-        }
-      });
-      const documentId = docRes.data.documentId;
-      // Insert content (plain text, can be extended for formatting)
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: {
-          requests: [
-            {
-              insertText: {
-                location: { index: 1 },
-                text: content
-              }
-            }
-          ]
-        }
-      });
-      // Move the doc to the correct folder
-      const drive = google.drive({ version: 'v3', auth });
-      await drive.files.update({
-        fileId: documentId,
-        addParents: folderId,
-        supportsAllDrives: true,
-        driveId
-      });
-      res.json({ success: true, file: { id: documentId, name: filename, type: 'gdoc' } });
-    } catch (err) {
-      console.error('Google Docs upload failed:', err.message);
-      res.status(500).json({ error: 'Google Docs upload failed: ' + err.message });
-    }
-    return;
+  // Only allow .md uploads
+  if (!filename.endsWith('.md')) {
+    console.error('Upload failed: only .md format is supported');
+    return res.status(400).json({ error: 'Only .md format is supported.' });
   }
   // Otherwise, upload as before
   const mimeTypes = {
