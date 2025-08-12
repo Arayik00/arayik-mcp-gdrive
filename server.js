@@ -244,17 +244,18 @@ app.post('/delete-file/:id', async (req, res) => {
 const { Readable } = require('stream');
 app.post('/upload-file-api', async (req, res) => {
   // Spotless upload: log, validate, robust error handling
-  let filename, content, isBase64;
+  let filename, content, isBase64, docType;
   if (req.body.tool === 'Upload_Document' && req.body.args) {
     filename = req.body.args.file_name || req.body.args.filename;
     content = req.body.args.content;
     isBase64 = req.body.args.is_base64;
+    docType = req.body.args.doc_type;
   } else {
     filename = req.body.file_name || req.body.filename;
     content = req.body.content;
     isBase64 = req.body.is_base64;
+    docType = req.body.doc_type;
   }
-  // Always use env folderId for all uploads
   const folderId = FOLDER_ID;
   const driveId = DRIVE_ID;
   if (!filename || !content) {
@@ -265,7 +266,48 @@ app.post('/upload-file-api', async (req, res) => {
     console.error('Upload failed: invalid filename', filename);
     return res.status(400).json({ error: 'Invalid filename.' });
   }
-  // Supported MIME types
+  // If docType is 'gdoc', create a Google Doc using Docs API
+  if (docType === 'gdoc') {
+    try {
+      await ensureServerInitialized();
+      const docs = google.docs({ version: 'v1', auth });
+      // Create the document
+      const docRes = await docs.documents.create({
+        requestBody: {
+          title: filename.replace(/\.gdoc$/, '')
+        }
+      });
+      const documentId = docRes.data.documentId;
+      // Insert content (plain text, can be extended for formatting)
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [
+            {
+              insertText: {
+                location: { index: 1 },
+                text: content
+              }
+            }
+          ]
+        }
+      });
+      // Move the doc to the correct folder
+      const drive = google.drive({ version: 'v3', auth });
+      await drive.files.update({
+        fileId: documentId,
+        addParents: folderId,
+        supportsAllDrives: true,
+        driveId
+      });
+      res.json({ success: true, file: { id: documentId, name: filename, type: 'gdoc' } });
+    } catch (err) {
+      console.error('Google Docs upload failed:', err.message);
+      res.status(500).json({ error: 'Google Docs upload failed: ' + err.message });
+    }
+    return;
+  }
+  // Otherwise, upload as before
   const mimeTypes = {
     '.md': 'text/markdown',
     '.html': 'application/vnd.google-apps.document',
@@ -281,7 +323,6 @@ app.post('/upload-file-api', async (req, res) => {
       break;
     }
   }
-  // Handle base64 or raw text
   let buffer;
   if (isBase64) {
     try {
@@ -296,12 +337,11 @@ app.post('/upload-file-api', async (req, res) => {
   } else {
     buffer = Buffer.from(content, 'utf8');
   }
-  // Log upload attempt
   console.log(`Uploading file: ${filename} to ${folderId ? 'folder ' + folderId : 'shared drive root'} with MIME type ${mimeType}`);
   try {
     await ensureServerInitialized();
     const drive = google.drive({ version: 'v3', auth });
-  let fileMetadata = { name: filename, parents: [folderId] };
+    let fileMetadata = { name: filename, parents: [folderId] };
     const media = {
       mimeType,
       body: Readable.from(buffer)
