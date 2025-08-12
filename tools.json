@@ -1,20 +1,44 @@
 [
   {
+    "name": "initialize",
+    "endpoint": "/initialize",
+    "method": "POST",
+    "description": "Initializes the MCP server and sets dynamic environment variables."
+  },
+  {
+    "name": "health",
+    "endpoint": "/health",
+    "method": "GET",
+    "description": "Checks the health and authentication status of the MCP server."
+  },
+  {
     "name": "list-files",
     "endpoint": "/list-files",
     "method": "GET",
-    "description": "Lists all files in the connected Google Drive account."
+    "description": "Lists all files in the connected Google Drive folder."
   },
   {
     "name": "read-file",
     "endpoint": "/read-file/:id",
     "method": "GET",
-    "description": "Reads the contents of a file by its ID."
+    "description": "Reads the contents and metadata of a file by its ID."
   },
   {
     "name": "update-file",
     "endpoint": "/update-file/:id",
     "method": "POST",
     "description": "Updates the contents of a file by its ID."
+  },
+  {
+    "name": "upload-file-api",
+    "endpoint": "/upload-file-api",
+    "method": "POST",
+    "description": "Uploads a new file to Google Drive with raw or base64 content."
+  },
+  {
+    "name": "delete-file",
+    "endpoint": "/delete-file/:id",
+    "method": "POST",
+    "description": "Deletes a file from Google Drive by its ID."
   }
 ]
