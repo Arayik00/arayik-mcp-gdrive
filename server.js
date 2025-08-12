@@ -151,7 +151,7 @@ app.get('/list-files', async (req, res) => {
     // Accept driveId as query param for shared drive support
   const driveId = DRIVE_ID;
     const params = {
-      pageSize: 10,
+      pageSize: 1000, // Return up to 1000 files (Drive API max)
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
       driveId,
