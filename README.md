@@ -2,17 +2,16 @@
 
 ## Upload a Google Docs File (with Markdown Content)
 
-Create a native Google Docs file in Drive, with Markdown text as its content:
+Upload a Markdown file to Drive with Markdown text as its content:
 
 ```bash
 curl -X POST https://arayik-mcp-gdrive.onrender.com/upload-file-api \
-	-H "Content-Type: application/json" \
-	-H "X-MCP-KEY: YOUR_SECRET_KEY" \
-	--data-binary @- <<'EOF'
+  -H "Content-Type: application/json" \
+  -H "X-MCP-KEY: YOUR_SECRET_KEY" \
+  --data-binary @- <<'EOF'
 {
-	"filename": "example-doc.gdoc",
-	"content": "# Your Markdown documentation\n...",
-	"doc_type": "gdoc"
+	"filename": "example.md",
+	"content": "# Your Markdown documentation\n..."
 }
 EOF
 ```
@@ -23,17 +22,16 @@ Response:
 	"success": true,
 	"file": {
 		"id": "<file-id>",
-		"name": "example-doc.gdoc",
-		"type": "gdoc"
+		"name": "example.md"
 	}
 }
 ```
 
-All e2e documentation files should be stored in Google Docs format (`.gdoc`) on Drive, with Markdown text inside each doc. This allows for easy editing, automation, and versioning, while keeping formatting consistent.
+All e2e documentation files should be stored in Markdown format (`.md`) on Drive. This allows for easy editing, automation, and versioning, while keeping formatting consistent.
 
 ## Upload a Markdown or Text File
 
-Upload as before (no doc_type or doc_type != 'gdoc'):
+Upload a Markdown file:
 
 ```bash
 curl -X POST https://arayik-mcp-gdrive.onrender.com/upload-file-api \
@@ -41,9 +39,8 @@ curl -X POST https://arayik-mcp-gdrive.onrender.com/upload-file-api \
 	-H "X-MCP-KEY: YOUR_SECRET_KEY" \
 	--data-binary @- <<'EOF'
 {
-	"filename": "example.md",
-	"content": "# Markdown content\n...",
-	"is_base64": false
+		"filename": "example.md",
+		"content": "# Markdown content\n..."
 }
 EOF
 ```
