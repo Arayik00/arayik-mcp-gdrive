@@ -1,4 +1,32 @@
+
 # PlayWright End-to-End Testing
+
+## Documentation Storage Format
+
+All e2e documentation is stored in Google Docs files on Drive. The content inside each Google Doc is in Markdown format (plain text with Markdown syntax). This allows for easy editing and versioning, while keeping formatting consistent for automation and review.
+
+You can upload or update documentation by sending Markdown text to the MCP server, which will create or update a Google Doc file containing your Markdown content.
+
+### How to Upload/Update Documentation
+
+To create or update a Google Doc file with Markdown content, use the following API call:
+
+```bash
+curl -X POST https://arayik-mcp-gdrive.onrender.com/upload-file-api \
+  -H "Content-Type: application/json" \
+  -H "X-MCP-KEY: YOUR_SECRET_KEY" \
+  --data-binary @- <<'EOF'
+{
+  "filename": "example-doc.gdoc",
+  "content": "# Your Markdown documentation\n...",
+  "doc_type": "gdoc"
+}
+EOF
+```
+
+This will create a Google Doc file named `example-doc.gdoc` in Drive, with the provided Markdown text as its content.
+
+You can use this for all e2e suite documentation files.
 
 ## How to run
 
