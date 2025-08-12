@@ -264,15 +264,15 @@ app.post('/upload-file-api', async (req, res) => {
     console.error('Upload failed: invalid filename', filename);
     return res.status(400).json({ error: 'Invalid filename.' });
   }
-  // Only allow .md uploads
-  if (!filename.endsWith('.md')) {
-    console.error('Upload failed: only .md format is supported');
-    return res.status(400).json({ error: 'Only .md format is supported.' });
+  // Allow .md and .html uploads
+  if (!filename.endsWith('.md') && !filename.endsWith('.html')) {
+    console.error('Upload failed: only .md and .html formats are supported');
+    return res.status(400).json({ error: 'Only .md and .html formats are supported.' });
   }
-  // Otherwise, upload as before
+  // Set MIME type for .md and .html
   const mimeTypes = {
     '.md': 'text/markdown',
-    '.html': 'application/vnd.google-apps.document',
+    '.html': 'text/html',
     '.json': 'application/json',
     '.txt': 'text/plain',
     '.csv': 'text/csv',
