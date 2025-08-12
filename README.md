@@ -1,3 +1,19 @@
+## Delete a File
+
+Delete a file from Google Drive by file ID:
+
+```bash
+curl -X POST https://arayik-mcp-gdrive.onrender.com/delete-file/<file-id> \
+	-H "X-MCP-KEY: YOUR_SECRET_KEY"
+```
+
+Response:
+```
+{
+	"success": true,
+	"fileId": "<file-id>"
+}
+```
 
 # arayik-mcp-gdrive
 
