@@ -27,9 +27,9 @@ Response:
 }
 ```
 
-All e2e documentation files should be stored in Markdown format (`.md`) on Drive. This allows for easy editing, automation, and versioning, while keeping formatting consistent.
+All e2e documentation files should be stored in Markdown (`.md`) or HTML (`.html`) format on Drive. Markdown is best for editing and automation; HTML is best for direct visual rendering in Drive.
 
-## Upload a Markdown or Text File
+## Upload a Markdown or HTML File
 
 Upload a Markdown file:
 
@@ -41,6 +41,20 @@ curl -X POST https://arayik-mcp-gdrive.onrender.com/upload-file-api \
 {
 		"filename": "example.md",
 		"content": "# Markdown content\n..."
+}
+EOF
+```
+
+Upload an HTML file for direct rendering in Drive:
+
+```bash
+curl -X POST https://arayik-mcp-gdrive.onrender.com/upload-file-api \
+	-H "Content-Type: application/json" \
+	-H "X-MCP-KEY: YOUR_SECRET_KEY" \
+	--data-binary @- <<'EOF'
+{
+		"filename": "example.html",
+		"content": "<!DOCTYPE html>\n<html>...your HTML here...</html>"
 }
 EOF
 ```
